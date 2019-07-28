@@ -1,8 +1,10 @@
 function createObservable(subscribe) {
     return {
         subscribe,
-        pipe(operator) {
-            return operator(this);
+        pipe(operators) {
+            return Array.from(arguments).reduce((observable, operator) => {
+                return operator(observable)
+            }, this);
         }
     };
 }
@@ -135,12 +137,21 @@ function createOperator(func) {
 }
 
 // const observable2 = map(x => x * 10)(observable);
-const observable2 = observable
-    .pipe(ogMap(x => x * 10))
-    .pipe(ogFilter(x => x !== 200))
-    .pipe(delayByClone(2000))
-    .pipe(map(x => x - 1))
-    .pipe(filter(x => x > 100));
+// const observable2 = observable
+//     .pipe(ogMap(x => x * 10))
+//     .pipe(ogFilter(x => x !== 200))
+//     .pipe(delayByClone(2000))
+//     .pipe(map(x => x - 1))
+//     .pipe(filter(x => x > 100));
+
+const observable2 = observable.pipe(
+    ogMap(x => x * 10),
+    ogFilter(x => x !== 200),
+    delayByClone(2000),
+    map(x => x - 1),
+    filter(x => x > 100)
+);
+
 
 observable.subscribe(observer);
 observable2.subscribe(observer);
