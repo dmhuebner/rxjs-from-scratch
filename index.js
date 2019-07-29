@@ -1,3 +1,5 @@
+const http = require('http');
+
 function createObservable(subscribe) {
     return {
         subscribe,
@@ -23,17 +25,22 @@ const observable = createObservable((observer) => {
     }
 });
 
-const observer = {
-    next(x) {
-        console.log(x);
-    },
-    error(err) {
-        console.log(err);
-    },
-    complete() {
-        console.log('done');
-    },
-};
+function httpGet$(host, path = '/') {
+    return createObservable((observer) => {
+        try {
+            http.get({
+                    host: host,
+                    path: path
+                },
+                (response) => {
+                    observer.next(response);
+                }
+            );
+        } catch (err) {
+            observer.error(err);
+        }
+    });
+}
 
 function ogMap(f) {
     return inputObservable => {
@@ -78,27 +85,7 @@ function ogFilter(f) {
     };
 }
 
-function delayBy(miliseconds) {
-    return inputObservable => {
-        const outputObservable = createObservable((outputObserver) => {
-            inputObservable.subscribe({
-                next(x) {
-                    setTimeout(() => outputObserver.next(x), miliseconds);
-                },
-                error(err) {
-                    outputObserver.error(err);
-                },
-                complete() {
-                    outputObserver.complete();
-                }
-            });
-        });
-
-        return outputObservable;
-    };
-}
-
-const delayByClone = (miliseconds) => {
+const delayBy = (miliseconds) => {
     return createOperator((x, outputObserver) => {
         setTimeout(() => outputObserver.next(x), miliseconds);
     });
@@ -136,6 +123,18 @@ function createOperator(func) {
     };
 }
 
+const observer = {
+    next(x) {
+        console.log(x);
+    },
+    error(err) {
+        console.log(err);
+    },
+    complete() {
+        console.log('done');
+    },
+};
+
 // const observable2 = map(x => x * 10)(observable);
 // const observable2 = observable
 //     .pipe(ogMap(x => x * 10))
@@ -147,11 +146,26 @@ function createOperator(func) {
 const observable2 = observable.pipe(
     ogMap(x => x * 10),
     ogFilter(x => x !== 200),
-    delayByClone(2000),
+    delayBy(2000),
     map(x => x - 1),
     filter(x => x > 100)
 );
 
 
-observable.subscribe(observer);
+// observable.subscribe(observer);
 observable2.subscribe(observer);
+
+// observableHttpRequest.pipe(
+//     map(resp => resp.headers),
+//     map(respHeaders => respHeaders.location),
+//     filter(reqLocation => reqLocation.indexOf('google'.toLowerCase()) === -1)
+// ).subscribe(observer);
+
+httpGet$('facebook.com').pipe(
+    map(resp => resp.headers),
+    map(respHeaders => respHeaders.location),
+    filter(reqLocation => reqLocation.indexOf('google'.toLowerCase()) === -1),
+    delayBy(3000)
+).subscribe(observer);
+
+// httpGet$('facebook.com').subscribe(observer);
